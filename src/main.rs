@@ -15,7 +15,7 @@ fn main() {
     let start = Instant::now();
 
     let solution = match input.trim() {
-        "01" => solutions::_01::solve().to_string(),
+        "01" => solutions::_01::solve("src/solutions/_01/_01.txt").to_string(),
         &_ => "Not valid".to_string(),
     };
 
