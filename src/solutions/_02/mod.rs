@@ -11,15 +11,17 @@ enum Direction {
 struct Level {
     value: i32,
     valid: bool,
+    dampener: bool,
     direction: Direction,
 }
 
 impl Level {
-    fn new() -> Self {
+    fn new(with_dampener: bool, direction: Direction) -> Self {
         Level {
             value: -1,
             valid: true,
-            direction: Direction::None,
+            dampener: with_dampener,
+            direction,
         }
     }
 
@@ -31,9 +33,15 @@ impl Level {
         if !self.valid {
             return self;
         }
+        println!("{:?}", self);
         match self.direction {
             Direction::Inc => {
                 if next <= self.value || next.abs_diff(self.value) > 3 {
+                    if self.dampener {
+                        println!("DAMPENED {:?}", next);
+                        self.dampener = false;
+                        return self;
+                    }
                     self.valid = false;
                 }
                 self.value = next;
@@ -42,6 +50,11 @@ impl Level {
             }
             Direction::Dec => {
                 if next >= self.value || next.abs_diff(self.value) > 3 {
+                    if self.dampener {
+                        println!("DAMPENED {:?}", next);
+                        self.dampener = false;
+                        return self;
+                    }
                     self.valid = false;
                 }
                 self.value = next;
@@ -50,13 +63,20 @@ impl Level {
             }
             Direction::None => {
                 if next.abs_diff(self.value) > 3 || next.abs_diff(self.value) == 0 {
-                    self.value = next;
-                    self.valid = false
+                    if self.dampener {
+                        println!("DAMPENED {:?}", next);
+                        self.dampener = false;
+                        return self;
+                    } else {
+                        self.value = next;
+                        self.valid = false
+                    }
                 }
 
                 if next > self.value {
                     self.direction = Direction::Inc;
-                } else {
+                }
+                if next < self.value {
                     self.direction = Direction::Dec;
                 }
                 self.value = next;
@@ -72,7 +92,9 @@ pub(crate) fn part_1(path: &str) -> i32 {
         if line
             .split_whitespace()
             .map(|str| str.parse::<i32>().unwrap())
-            .fold(Level::new(), |acc, next| acc.increment(next))
+            .fold(Level::new(false, Direction::None), |acc, next| {
+                acc.increment(next)
+            })
             .valid
         {
             valid_lines += 1;
@@ -82,9 +104,27 @@ pub(crate) fn part_1(path: &str) -> i32 {
     valid_lines
 }
 
-//pub(crate) fn part_2(path: &str) -> i32 {
-//    0
-//}
+pub(crate) fn part_2(path: &str) -> i32 {
+    let mut valid_lines = 0;
+    parse_file_line_by_line(path, |line| {
+        println!("------{:?}----------", line);
+        if line
+            .split_whitespace()
+            .map(|str| str.parse::<i32>().unwrap())
+            .fold(Level::new(true, Direction::None), |acc, next| {
+                acc.increment(next)
+            })
+            .valid
+        {
+            valid_lines += 1;
+            println!("-- good !");
+        } else {
+            println!("-- bad !");
+        }
+    })
+    .unwrap();
+    valid_lines
+}
 
 #[cfg(test)]
 mod tests {
@@ -95,8 +135,8 @@ mod tests {
         assert_eq!(part_1("src/solutions/_02/_02.test.txt"), 2)
     }
 
-    //#[test]
-    //fn test_02_part_2() {
-    //assert_eq!(part_2("src/solutions/_02/_02.test.txt"), 31)
-    //}
+    #[test]
+    fn test_02_part_2() {
+        assert_eq!(part_2("src/solutions/_02/_02.test.txt"), 4)
+    }
 }
